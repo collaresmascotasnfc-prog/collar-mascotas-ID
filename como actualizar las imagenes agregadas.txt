@@ -1,0 +1,11 @@
+Abrir Git Bash
+copiar esa linea en terminal:cd "C:/Users/Arcade/Desktop/collar mascotas ID"
+luego este: git add .
+luego este:git commit -m "Actualiza el proyecto"
+y para terminar este:git push origin master
+
+6003600660
+
+este es el formato de la foto:https://collaresmascotasnfc-prog.github.io/collar-mascotas-ID/img/nombre de la imagen de la mascota.jpg
+
+y este es el formato de la pagina para buscar a cada mascota: https://collaresmascotasnfc-prog.github.io/collar-mascotas-ID/mascotas%20ID.html?id=IDMascota(se cambia lo ultimo por la mascota que corrsponde)
