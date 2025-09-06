@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#22c55e" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     .bg-soft { background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%); }
     body { overflow-x: hidden; }
@@ -130,7 +130,7 @@
       $('call-owner').classList.toggle('opacity-50', !formattedPhone);
 
       const waLink = $('whatsapp-owner');
-      waLink.href = formattedPhone ? `https://wa.me/${formattedPhone.replace('+', '')}` : '#';
+      waLink.href = formattedPhone ? `https://wa.me/${formattedPhone}` : '#';
       waLink.classList.toggle('pointer-events-none', !formattedPhone);
       waLink.classList.toggle('opacity-50', !formattedPhone);
 
