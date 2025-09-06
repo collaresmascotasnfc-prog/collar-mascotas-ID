@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mascota Segura</title>
+  <meta name="theme-color" content="#22c55e" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    .bg-soft { background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%); }
+    body { overflow-x: hidden; }
+    img { max-width: 100%; height: auto; }
+  </style>
+</head>
+<body class="bg-soft min-h-screen p-4">
+  <main class="w-full max-w-md mx-auto">
+    <section id="card" class="bg-white rounded-2xl shadow-xl p-6 hidden">
+      <div class="flex flex-col items-center text-center">
+        <img id="pet-photo" alt="Foto de la mascota" class="w-32 h-32 rounded-full object-cover shadow mb-4 cursor-pointer" />
+        <h1 id="pet-name" class="text-3xl font-extrabold text-green-700"></h1>
+        <p id="pet-description" class="text-gray-700 mt-2"></p>
+        <p id="pet-health" class="mt-3 text-sm font-semibold text-red-600"></p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 w-full">
+          <a id="email-owner" class="block text-center rounded-2xl px-4 py-3 bg-blue-600 text-white shadow hover:brightness-110 transition">📧 Email</a>
+          <a id="call-owner" class="block text-center rounded-2xl px-4 py-3 bg-green-600 text-white shadow hover:brightness-110 transition">📞 Llamar</a>
+          <a id="whatsapp-owner" class="block text-center rounded-2xl px-4 py-3 bg-emerald-600 text-white shadow hover:brightness-110 transition">🟢 WhatsApp</a>
+        </div>
+
+        <div id="geo-status" class="text-xs text-gray-500 mt-4"></div>
+      </div>
+    </section>
+
+    <section id="state-loading" class="flex flex-col items-center justify-center gap-3 py-16">
+      <svg xmlns="http://www.w3.org/2000/svg" class="animate-spin h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="12" r="10" stroke-width="4" opacity="0.2"></circle>
+        <path d="M22 12a10 10 0 0 1-10 10" stroke-width="4"></path>
+      </svg>
+      <p class="text-gray-600 text-sm">Cargando ficha de la mascota…</p>
+    </section>
+
+    <section id="state-missing-id" class="hidden text-center py-10">
+      <h2 class="text-xl font-bold text-gray-800">Falta el parámetro <code>?id=</code></h2>
+      <p class="text-gray-600 mt-2">Escanea el collar NFC o abre la URL con <code>?id=TuCodigo</code>.</p>
+    </section>
+
+    <section id="state-not-found" class="hidden text-center py-10">
+      <h2 class="text-xl font-bold text-red-600">Mascota no encontrada ❌</h2>
+      <p class="text-gray-600 mt-2">Verifica que el <strong>idMascota</strong> exista en la hoja o que el ID en la URL esté correcto.</p>
+    </section>
+
+    <section id="state-error" class="hidden text-center py-10">
+      <h2 class="text-xl font-bold text-red-600">Error al cargar datos</h2>
+      <p id="err-msg" class="text-gray-600 mt-2"></p>
+    </section>
+  </main>
+
+  <script>
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQFmXjRc2OgFvl4iAxISrUbqEm3cCsG7iaYvPQG5OTqZ-Xw4h5Fube68h2aDhdpYMoWA1-Kf17jgWX/pub?gid=0&single=true&output=csv";
+    const LOG_ENDPOINT = "";
+
+    const $ = (id) => document.getElementById(id);
+    const show = (id) => $(id).classList.remove('hidden');
+    const hide = (id) => $(id).classList.add('hidden');
+
+    function getIdFromUrl() {
+      const sp = new URLSearchParams(window.location.search);
+      let id = sp.get('id');
+      if (!id || id.trim() === '') {
+        if (window.location.hash) id = window.location.hash.replace(/^#/, "");
+        if ((!id || id.trim()==='') && window.location.pathname) {
+          const parts = window.location.pathname.split('/').filter(Boolean);
+          if (parts.length >= 1) id = parts[parts.length-1];
+        }
+      }
+      return (id || '').trim();
+    }
+
+    function normalize(str) {
+      return (str || '').toString().trim();
+    }
+
+    function buildPetObject(row) {
+      const normalizedRow = {};
+      for (const key in row) {
+        const normalizedKey = key.normalize('NFD').replace(/[̀-\u036f]/g, '').trim().toLowerCase();
+        normalizedRow[normalizedKey] = row[key];
+      }
+
+      return {
+        id: normalizedRow['idmascota'] || '',
+        nombre: normalizedRow['nombre'] || '',
+        foto: normalizedRow['foto'] || '',
+        descripcion: normalizedRow['descripcion'] || '',
+        enfermedad: normalizedRow['enfermedad'] || '',
+        email: normalizedRow['emaildueno'] || normalizedRow['email'] || '',
+        telefono: normalizedRow['telefonodueno'] || normalizedRow['telefono'] || ''
+      };
+    }
+
+    function renderPet(pet) {
+      $('pet-name').textContent = pet.nombre || 'Mascota';
+      $('pet-description').textContent = pet.descripcion || '';
+      $('pet-health').textContent = pet.enfermedad ? `⚠️ ${pet.enfermedad}` : '';
+
+      const img = $('pet-photo');
+      img.src = pet.foto || 'https://placehold.co/256x256?text=Mascota';
+      img.onerror = () => img.src = 'https://placehold.co/256x256?text=Mascota';
+      img.onclick = () => window.open(img.src, '_blank');
+
+      $('email-owner').href = pet.email ? `mailto:${pet.email}` : '#';
+      $('email-owner').classList.toggle('pointer-events-none', !pet.email);
+      $('email-owner').classList.toggle('opacity-50', !pet.email);
+
+      $('call-owner').href = pet.telefono ? `tel:${pet.telefono}` : '#';
+      $('call-owner').classList.toggle('pointer-events-none', !pet.telefono);
+      $('call-owner').classList.toggle('opacity-50', !pet.telefono);
+
+      const waLink = $('whatsapp-owner');
+      const cleanPhone = (pet.telefono || '').replace(/[^0-9]/g, '');
+      waLink.href = cleanPhone ? `https://wa.me/${cleanPhone}` : '#';
+      waLink.classList.toggle('pointer-events-none', !cleanPhone);
+      waLink.classList.toggle('opacity-50', !cleanPhone);
+
+      hide('state-loading');
+      show('card');
+    }
+
+    async function fetchCsv() {
+      const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.text();
+    }
+
+    function parseCsvToObjects(csvText) {
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true, dynamicTyping: false });
+      if (parsed.errors && parsed.errors.length) {
+        console.warn('CSV parse errors', parsed.errors);
+      }
+      return parsed.data.map(buildPetObject);
+    }
+
+    function findPetById(list, id) {
+      const needle = normalize(id).toLowerCase();
+      return list.find(p => normalize(p.id).toLowerCase() === needle);
+    }
+
+    function requestGeoAndLog(petId) {
+      if (!('geolocation' in navigator)) {
+        $('geo-status').textContent = 'Este dispositivo no soporta geolocalización.';
+        return;
+      }
+      $('geo-status').textContent = 'Solicitando ubicación…';
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+        $('geo-status').textContent = `Ubicación obtenida (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+
+        const emailLink = $('email-owner');
+        const phoneLink = $('call-owner');
+        const waLink = $('whatsapp-owner');
+
+        const locationText = `He encontrado a tu mascota en: http://maps.google.com/?q=${lat},${lng} (precisión: +/- ${accuracy} metros).`;
+
+        if (emailLink.href && !emailLink.href.includes('?')) {
+          emailLink.href += `?subject=¡Encontré a tu mascota!&body=${encodeURIComponent(locationText)}`;
+        }
+
+        if (phoneLink.href && !phoneLink.href.includes('?')) {
+          const smsBody = encodeURIComponent(`Hola, encontré a tu mascota. Su ubicación es: http://maps.google.com/?q=${lat},${lng}`);
+          phoneLink.href += `?body=${smsBody}`;
+        }
+
+        if (waLink.href && !waLink.href.includes('?')) {
+          const waBody = encodeURIComponent(`Hola, encontré a tu mascota. Su ubicación es: http://maps.google.com/?q=${lat},${lng}`);
+          waLink.href += `?text=${waBody}`;
+        }
+
+        if (!LOG_ENDPOINT) return;
+        try {
+          const payload = { idMascota: petId, lat, lng, accuracy, ts: Date.now(), userAgent: navigator.userAgent };
+          const r = await fetch(LOG_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          $('geo-status').textContent += ' • Lectura registrada ✅';
+        } catch (e) {
+          console.error(e);
+          $('geo-status').textContent += ' • No se pudo registrar la lectura';
+        }
+      }, (err) => {
+        const m = {
+          1: 'Permiso denegado por el usuario.',
+          2: 'No se pudo determinar la ubicación.',
+          3: 'Solicitud de ubicación vencida.'
+        }[err.code] || 'Error de geolocalización.';
+        $('geo-status').textContent = m;
+      }, { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 });
+    }
+
+    async function init() {
+      const petId = getIdFromUrl();
+      if (!petId) {
+        hide('state-loading');
+        show('state-missing-id');
+        return;
+      }
+
+      try {
+        const csv = await fetchCsv();
+        const pets = parseCsvToObjects(csv);
+        const pet = findPetById(pets, petId);
+        if (!pet) {
+          hide('state-loading');
+          show('state-not-found');
+          return;
+        }
+        renderPet(pet);
+        requestGeoAndLog(petId);
+
+        if (new URLSearchParams(location.search).get('debug') === '1') {
+          console.log('Pet object:', pet);
+        }
+      } catch (e) {
+        console.error(e);
+        hide('state-loading');
+        $('err-msg').textContent = String(e.message || e);
+        show('state-error');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
