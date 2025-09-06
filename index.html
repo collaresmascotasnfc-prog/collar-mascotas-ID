@@ -170,7 +170,8 @@
         const emailLink = $('email-owner');
         const waLink = $('whatsapp-owner');
 
-        const locationText = `He encontrado a tu mascota en: https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        const locationText = `He encontrado a tu mascota en: ${googleMapsUrl}`;
 
         if (emailLink.href && !emailLink.href.includes('?')) {
           emailLink.href += `?subject=¡Encontré a tu mascota!&body=${encodeURIComponent(locationText)}`;
