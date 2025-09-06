@@ -1,98 +1,147 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mascota Segura</title>
-  <meta name="theme-color" content="#22c55e" />
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <style>
-    .bg-soft { background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%); }
-    body { overflow-x: hidden; }
-    img { max-width: 100%; height: auto; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mascota Segura</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS para leer Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    .bg-soft { background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 60%); }
+    body { overflow-x: hidden; }
+    img { max-width: 100%; height: auto; }
+  </style>
 </head>
 <body class="bg-soft min-h-screen p-4">
-  <main class="w-full max-w-md mx-auto">
-    <section id="card" class="bg-white rounded-2xl shadow-xl p-6 hidden">
-      <div class="flex flex-col items-center text-center">
-        <img id="pet-photo" alt="Foto de la mascota" class="w-32 h-32 rounded-full object-cover shadow mb-4 cursor-pointer" />
-        <h1 id="pet-name" class="text-3xl font-extrabold text-green-700"></h1>
-        <p id="pet-description" class="text-gray-700 mt-2"></p>
-        <p id="pet-health" class="mt-3 text-sm font-semibold text-red-600"></p>
+  <main class="w-full max-w-md mx-auto">
+    <!-- Card de mascota -->
+    <section id="card" class="bg-white rounded-2xl shadow-xl p-6 hidden">
+      <div class="flex flex-col items-center text-center">
+        <img id="pet-photo" alt="Foto de la mascota" class="w-32 h-32 rounded-full object-cover shadow mb-4 cursor-pointer" />
+        <h1 id="pet-name" class="text-3xl font-extrabold text-green-700"></h1>
+        <p id="pet-description" class="text-gray-700 mt-2"></p>
+        <p id="pet-health" class="mt-3 text-sm font-semibold text-red-600"></p>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 w-full">
-          <a id="email-owner" class="block text-center rounded-2xl px-4 py-3 bg-blue-600 text-white shadow hover:brightness-110 transition">📧 Email</a>
-          <a id="call-owner" class="block text-center rounded-2xl px-4 py-3 bg-green-600 text-white shadow hover:brightness-110 transition">📞 Llamar</a>
-          <a id="whatsapp-owner" class="block text-center rounded-2xl px-4 py-3 bg-emerald-600 text-white shadow hover:brightness-110 transition">🟢 WhatsApp</a>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6 w-full">
+          <a id="email-owner" class="block text-center rounded-2xl px-4 py-3 bg-blue-600 text-white shadow hover:brightness-110 transition">📧 Email</a>
+          <a id="call-owner" class="block text-center rounded-2xl px-4 py-3 bg-green-600 text-white shadow hover:brightness-110 transition">📞 Llamar</a>
+          <a id="whatsapp-owner" class="block text-center rounded-2xl px-4 py-3 bg-emerald-600 text-white shadow hover:brightness-110 transition">🟢 WhatsApp</a>
+        </div>
 
-        <div id="geo-status" class="text-xs text-gray-500 mt-4"></div>
-      </div>
-    </section>
+        <div id="geo-status" class="text-xs text-gray-500 mt-4"></div>
+      </div>
+    </section>
 
-    <section id="state-loading" class="flex flex-col items-center justify-center gap-3 py-16">
-      <svg xmlns="http://www.w3.org/2000/svg" class="animate-spin h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <circle cx="12" cy="12" r="10" stroke-width="4" opacity="0.2"></circle>
-        <path d="M22 12a10 10 0 0 1-10 10" stroke-width="4"></path>
-      </svg>
-      <p class="text-gray-600 text-sm">Cargando ficha de la mascota…</p>
-    </section>
+    <!-- Loading -->
+    <section id="state-loading" class="flex flex-col items-center justify-center gap-3 py-16">
+      <p class="text-gray-600 text-sm">Cargando ficha de la mascota…</p>
+    </section>
 
-    <section id="state-missing-id" class="hidden text-center py-10">
-      <h2 class="text-xl font-bold text-gray-800">Falta el parámetro <code>?id=</code></h2>
-      <p class="text-gray-600 mt-2">Escanea el collar NFC o abre la URL con <code>?id=TuCodigo</code>.</p>
-    </section>
+    <!-- Estados de error -->
+    <section id="state-missing-id" class="hidden text-center py-10">
+      <h2 class="text-xl font-bold text-gray-800">Falta el parámetro <code>?id=</code></h2>
+    </section>
+    <section id="state-not-found" class="hidden text-center py-10">
+      <h2 class="text-xl font-bold text-red-600">Mascota no encontrada ❌</h2>
+    </section>
+    <section id="state-error" class="hidden text-center py-10">
+      <h2 class="text-xl font-bold text-red-600">Error al cargar datos</h2>
+      <p id="err-msg" class="text-gray-600 mt-2"></p>
+    </section>
+  </main>
 
-    <section id="state-not-found" class="hidden text-center py-10">
-      <h2 class="text-xl font-bold text-red-600">Mascota no encontrada ❌</h2>
-      <p class="text-gray-600 mt-2">Verifica que el <strong>idMascota</strong> exista en la hoja o que el ID en la URL esté correcto.</p>
-    </section>
+  <script>
+    const EXCEL_URL = "mascotas.xlsx"; // tu archivo en GitHub Pages
+    const $ = (id) => document.getElementById(id);
+    const show = (id) => $(id).classList.remove('hidden');
+    const hide = (id) => $(id).classList.add('hidden');
 
-    <section id="state-error" class="hidden text-center py-10">
-      <h2 class="text-xl font-bold text-red-600">Error al cargar datos</h2>
-      <p id="err-msg" class="text-gray-600 mt-2"></p>
-    </section>
-  </main>
+    function getIdFromUrl() {
+      const sp = new URLSearchParams(window.location.search);
+      return (sp.get('id') || '').trim();
+    }
 
-  <script>
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQFmXjRc2OgFvl4iAxISrUbqEm3cCsG7iaYvPQG5OTqZ-Xw4h5Fube68h2aDhdpYMoWA1-Kf17jgWX/pub?gid=0&single=true&output=csv";
-    const LOG_ENDPOINT = "";
+    function buildPetObject(row) {
+      const normalizedRow = {};
+      for (const key in row) {
+        const normalizedKey = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+        normalizedRow[normalizedKey] = row[key];
+      }
+      return {
+        id: normalizedRow['idmascota'] || '',
+        nombre: normalizedRow['nombre'] || '',
+        foto: normalizedRow['foto'] || '',
+        descripcion: normalizedRow['descripcion'] || '',
+        enfermedad: normalizedRow['enfermedad'] || '',
+        email: normalizedRow['emaildueno'] || normalizedRow['email'] || '',
+        telefono: normalizedRow['telefonodueno'] || normalizedRow['telefono'] || ''
+      };
+    }
 
-    const $ = (id) => document.getElementById(id);
-    const show = (id) => $(id).classList.remove('hidden');
-    const hide = (id) => $(id).classList.add('hidden');
+    function formatPhoneNumber(phone) {
+      if (!phone) return null;
+      const cleanPhone = phone.toString().replace(/[^0-9]/g, '');
+      if (cleanPhone.startsWith('56')) return `+${cleanPhone}`;
+      return `+56${cleanPhone}`;
+    }
 
-    function getIdFromUrl() {
-      const sp = new URLSearchParams(window.location.search);
-      let id = sp.get('id');
-      if (!id || id.trim() === '') {
-        if (window.location.hash) id = window.location.hash.replace(/^#/, "");
-        if ((!id || id.trim()==='') && window.location.pathname) {
-          const parts = window.location.pathname.split('/').filter(Boolean);
-          if (parts.length >= 1) id = parts[parts.length-1];
-        }
-      }
-      return (id || '').trim();
-    }
+    function renderPet(pet) {
+      $('pet-name').textContent = pet.nombre || 'Mascota';
+      $('pet-description').textContent = pet.descripcion || '';
+      $('pet-health').textContent = pet.enfermedad ? `⚠️ ${pet.enfermedad}` : '';
 
-    function normalize(str) {
-      return (str || '').toString().trim();
-    }
+      const img = $('pet-photo');
+      img.src = pet.foto || 'https://placehold.co/256x256?text=Mascota';
+      img.onerror = () => img.src = 'https://placehold.co/256x256?text=Mascota';
+      img.onclick = () => window.open(img.src, '_blank');
 
-    function buildPetObject(row) {
-      const normalizedRow = {};
-      for (const key in row) {
-        const normalizedKey = key.normalize('NFD').replace(/[̀-\u036f]/g, '').trim().toLowerCase();
-        normalizedRow[normalizedKey] = row[key];
-      }
+      const formattedPhone = formatPhoneNumber(pet.telefono);
+      $('email-owner').href = pet.email ? `mailto:${pet.email}` : '#';
+      $('call-owner').href = formattedPhone ? `tel:${formattedPhone}` : '#';
+      $('whatsapp-owner').href = formattedPhone ? `https://wa.me/${formattedPhone}` : '#';
 
-      return {
-        id: normalizedRow['idmascota'] || '',
-        nombre: normalizedRow['nombre'] || '',
-        foto: normalizedRow['foto'] || '',
-        descripcion: normalizedRow['descripcion'] || '',
-        enfermedad: normalizedRow['enfermedad'] || '',
-        email: normalizedRow['
+      hide('state-loading');
+      show('card');
+    }
+
+    async function fetchExcel() {
+      const res = await fetch(EXCEL_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(sheet);
+    }
+
+    async function init() {
+      const petId = getIdFromUrl();
+      if (!petId) {
+        hide('state-loading');
+        show('state-missing-id');
+        return;
+      }
+
+      try {
+        const rows = await fetchExcel();
+        const pets = rows.map(buildPetObject);
+        const pet = pets.find(p => p.id.toLowerCase() === petId.toLowerCase());
+
+        if (!pet) {
+          hide('state-loading');
+          show('state-not-found');
+          return;
+        }
+        renderPet(pet);
+      } catch (e) {
+        console.error(e);
+        hide('state-loading');
+        $('err-msg').textContent = String(e.message || e);
+        show('state-error');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
