@@ -170,14 +170,14 @@
         const emailLink = $('email-owner');
         const waLink = $('whatsapp-owner');
 
-        const locationText = `He encontrado a tu mascota en: http://maps.google.com/?q=${lat},${lng} (precisión: +/- ${accuracy} metros).`;
+        const locationText = `He encontrado a tu mascota en: https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
         if (emailLink.href && !emailLink.href.includes('?')) {
           emailLink.href += `?subject=¡Encontré a tu mascota!&body=${encodeURIComponent(locationText)}`;
         }
 
         if (waLink.href && !waLink.href.includes('?')) {
-          const waBody = encodeURIComponent(`Hola, encontré a tu mascota. Su ubicación es: http://maps.google.com/?q=${lat},${lng}`);
+          const waBody = encodeURIComponent(`Hola, encontré a tu mascota. Su ubicación es: ${locationText}`);
           waLink.href += `?text=${waBody}`;
         }
 
