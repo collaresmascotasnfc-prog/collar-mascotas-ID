@@ -170,16 +170,15 @@
         const emailLink = $('email-owner');
         const waLink = $('whatsapp-owner');
 
-        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-        const locationText = `He encontrado a tu mascota en: ${googleMapsUrl}`;
+        const locationText = `He encontrado a tu mascota en: http://maps.google.com/?q=${lat},${lng} (precisión: +/- ${accuracy} metros).`;
 
         if (emailLink.href && !emailLink.href.includes('?')) {
           emailLink.href += `?subject=¡Encontré a tu mascota!&body=${encodeURIComponent(locationText)}`;
         }
 
         if (waLink.href && !waLink.href.includes('?')) {
-          const waBody = encodeURIComponent(`Hola, encontré a tu mascota. Su ubicación es: ${locationText}`);
-          waLink.href += `&text=${waBody}`;
+          const waBody = encodeURIComponent(`Hola, encontré a tu mascota. Su ubicación es: http://maps.google.com/?q=${lat},${lng}`);
+          waLink.href += `?text=${waBody}`;
         }
 
         if (!LOG_ENDPOINT) return;
